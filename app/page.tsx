@@ -1,26 +1,19 @@
-import { publishAgentArticle } from "@/lib/agent/webAgent"
+import Link from "next/link";
 
 export default function Home() {
-  async function runAgentAction() {
-    "use server"
-
-    await publishAgentArticle()
-  }
-
   return (
-    <main className="p-10">
-      <h1 className="mb-6 text-2xl font-bold">
-        AI Agent Test
+    <main className="mx-auto max-w-5xl px-6 py-16">
+      <h1 className="text-4xl font-bold">
+        Genshin AI Companion
       </h1>
 
-      <form action={runAgentAction}>
-        <button
-          type="submit"
-          className="rounded-md bg-black px-4 py-2 text-white"
-        >
-          Web Agentを起動
-        </button>
-      </form>
+      <p className="mt-4 text-gray-500">
+        原神のアカウント管理・AI育成アシスタント
+      </p>
+
+      <Link href="/characters" className="mt-8 inline-block underline">
+        キャラクター一覧へ
+      </Link>
     </main>
-  )
+  );
 }
