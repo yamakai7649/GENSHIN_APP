@@ -1,4 +1,5 @@
-import { register } from "@/lib/actions/auth"
+
+import { register } from "@/lib/actions/auth";
 
 export default function RegisterPage() {
   return (
@@ -8,34 +9,6 @@ export default function RegisterPage() {
       </h1>
 
       <form action={register} className="space-y-5">
-        <input
-          name="username"
-          placeholder="ユーザー名"
-          className="w-full rounded-md border px-3 py-2"
-          required
-        />
-
-        <input
-          name="displayName"
-          placeholder="表示名"
-          className="w-full rounded-md border px-3 py-2"
-          required
-        />
-
-        <textarea
-          name="bio"
-          placeholder="自己紹介（任意）"
-          rows={3}
-          className="w-full rounded-md border px-3 py-2"
-        />
-
-        <input
-          name="avatarUrl"
-          type="url"
-          placeholder="プロフィール画像URL（任意）"
-          className="w-full rounded-md border px-3 py-2"
-        />
-
         <input
           name="email"
           type="email"
@@ -61,5 +34,5 @@ export default function RegisterPage() {
         </button>
       </form>
     </main>
-  )
+  );
 }

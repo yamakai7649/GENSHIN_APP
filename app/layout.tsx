@@ -3,8 +3,8 @@ import "./globals.css";
 import Header from "@/components/Header"
 
 export const metadata: Metadata = {
-  title: "AgentHub",
-  description: "技術記事を投稿・閲覧できるサービス",
+  title: "Genshin AI Companion",
+  description: "原神のアカウント管理・AI育成アシスタント",
 }
 
 export default function RootLayout({

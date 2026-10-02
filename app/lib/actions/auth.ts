@@ -1,131 +1,78 @@
-"use server"
 
-import { pool } from "@/lib/db"
+"use server";
+
+import { pool } from "@/lib/db";
 import {
   hashPassword,
   verifyPassword,
-} from "@/lib/auth/password"
+} from "@/lib/auth/password";
 import {
   createSession,
   deleteSession,
-} from "@/lib/auth/session"
-import { redirect } from "next/navigation"
+} from "@/lib/auth/session";
+import { redirect } from "next/navigation";
 
+// 新規登録
 export async function register(formData: FormData) {
-  const username = formData.get("username")
-  const displayName = formData.get("displayName")
-  const bio = formData.get("bio")
-  const avatarUrl = formData.get("avatarUrl")
-  const email = formData.get("email")
-  const password = formData.get("password")
+  const email = formData.get("email");
+  const password = formData.get("password");
 
+  // サーバー側でも入力チェック
   if (
-    typeof username !== "string" ||
-    typeof displayName !== "string" ||
-    typeof bio !== "string" ||
-    typeof avatarUrl !== "string" ||
     typeof email !== "string" ||
-    typeof password !== "string"
-  ) {
-    throw new Error("入力内容が不正です")
-  }
-
-  if (
-    !username.trim() ||
-    !displayName.trim() ||
+    typeof password !== "string" ||
     !email.trim() ||
-    !password
+    password.length < 8
   ) {
-    throw new Error("必須項目を入力してください")
+    throw new Error("入力内容を確認してください");
   }
 
-  if (password.length < 8) {
-    throw new Error("パスワードは8文字以上で入力してください")
-  }
+  const normalizedEmail = email.trim().toLowerCase();
 
-  const normalizedUsername = username.trim().toLowerCase()
-  const normalizedEmail = email.trim().toLowerCase()
+  // パスワードをそのままDBには保存しない
+  const passwordHash = await hashPassword(password);
 
-  const passwordHash = await hashPassword(password)
-
-  const client = await pool.connect()
-
-  let userId: number
+  let userId: number;
 
   try {
-    await client.query("BEGIN")
-
-    const userResult = await client.query<{ id: number }>(
+    const result = await pool.query<{ id: number }>(
       `
-        INSERT INTO users (
-          username,
-          display_name,
-          bio,
-          avatar_url,
-          user_type
-        )
-        VALUES ($1, $2, $3, $4, 'human')
+        INSERT INTO users (email, password_hash)
+        VALUES ($1, $2)
         RETURNING id;
       `,
-      [
-        normalizedUsername,
-        displayName.trim(),
-        bio.trim() || null,
-        avatarUrl.trim() || null,
-      ]
-    )
+      [normalizedEmail, passwordHash]
+    );
 
-    userId = userResult.rows[0].id
-
-    await client.query(
-      `
-        INSERT INTO human_accounts (
-          user_id,
-          email,
-          password_hash
-        )
-        VALUES ($1, $2, $3);
-      `,
-      [
-        userId,
-        normalizedEmail,
-        passwordHash,
-      ]
-    )
-
-    await client.query("COMMIT")
+    userId = result.rows[0].id;
   } catch (error) {
-    await client.query("ROLLBACK")
-
+    // PostgreSQLの一意制約違反
     if (
       typeof error === "object" &&
       error !== null &&
       "code" in error &&
       error.code === "23505"
     ) {
-      throw new Error(
-        "そのユーザー名またはメールアドレスはすでに使用されています"
-      )
+      throw new Error("このメールアドレスは登録済みです");
     }
 
-    throw error
-  } finally {
-    client.release()
+    throw error;
   }
 
-  await createSession(userId)
+  await createSession(userId);
 
-  redirect("/articles")
+  redirect("/characters");
 }
 
 type LoginUser = {
-  id: number
-  passwordHash: string
-}
+  id: number;
+  passwordHash: string;
+};
 
+// ログイン
 export async function login(formData: FormData) {
-  const email = formData.get("email")
-  const password = formData.get("password")
+  const email = formData.get("email");
+  const password = formData.get("password");
 
   if (
     typeof email !== "string" ||
@@ -133,52 +80,43 @@ export async function login(formData: FormData) {
     !email.trim() ||
     !password
   ) {
-    throw new Error(
-      "メールアドレスとパスワードを入力してください"
-    )
+    throw new Error("入力内容を確認してください");
   }
-
-  const normalizedEmail = email.trim().toLowerCase()
 
   const result = await pool.query<LoginUser>(
     `
       SELECT
-        users.id,
-        human_accounts.password_hash AS "passwordHash"
-      FROM human_accounts
-      JOIN users
-        ON human_accounts.user_id = users.id
-      WHERE human_accounts.email = $1;
+        id,
+        password_hash AS "passwordHash"
+      FROM users
+      WHERE email = $1;
     `,
-    [normalizedEmail]
-  )
+    [email.trim().toLowerCase()]
+  );
 
-  const user = result.rows[0]
+  const user = result.rows[0];
 
   if (!user) {
-    throw new Error(
-      "メールアドレスまたはパスワードが違います"
-    )
+    throw new Error("メールアドレスまたはパスワードが違います");
   }
 
-  const isValidPassword = await verifyPassword(
+  const isValid = await verifyPassword(
     password,
     user.passwordHash
-  )
+  );
 
-  if (!isValidPassword) {
-    throw new Error(
-      "メールアドレスまたはパスワードが違います"
-    )
+  if (!isValid) {
+    throw new Error("メールアドレスまたはパスワードが違います");
   }
 
-  await createSession(user.id)
+  await createSession(user.id);
 
-  redirect("/articles")
+  redirect("/characters");
 }
 
+// ログアウト
 export async function logout() {
-  await deleteSession()
+  await deleteSession();
 
-  redirect("/articles")
+  redirect("/");
 }

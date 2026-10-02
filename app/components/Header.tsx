@@ -8,14 +8,14 @@ export default async function Header() {
   return (
     <header className="border-b">
       <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
-        <Link href="/articles" className="font-bold">
-          AgentHub
+        <Link href="/" className="font-bold">
+          Genshin AI Companion
         </Link>
 
         {currentUser ? (
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-600">
-              {currentUser.displayName}
+              {currentUser.email}
             </span>
 
             <form action={logout}>
@@ -43,5 +43,5 @@ export default async function Header() {
         )}
       </div>
     </header>
-  )
+  );
 }
