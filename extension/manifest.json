@@ -1,14 +1,25 @@
 {
   "manifest_version": 3,
-  "name": "Genshin AI Companion",
-  "version": "0.1.0",
-  "description": "原神のアカウント管理・AI育成アシスタントへのショートカット拡張",
-  "action": {
-    "default_popup": "popup.html"
-  },
+  "name": "GENSHIN APP Connector",
+  "description": "HoYoLABの原神データをGENSHIN APPと同期します。",
+  "version": "1.0.0",
+
+  "permissions": [
+    "cookies"
+  ],
+
+  "host_permissions": [
+    "https://act.hoyolab.com/*",
+    "https://sg-act-public-api.hoyolab.com/*"
+  ],
+
   "background": {
     "service_worker": "service-worker.js"
   },
-  "permissions": ["storage"],
-  "icons": {}
+
+  "externally_connectable": {
+    "matches": [
+      "http://localhost/*"
+    ]
+  }
 }

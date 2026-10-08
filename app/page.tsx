@@ -1,19 +1,23 @@
-import Link from "next/link";
+import SyncButton from "@/components/SyncButton";
 
 export default function Home() {
   return (
-    <main className="mx-auto max-w-5xl px-6 py-16">
-      <h1 className="text-4xl font-bold">
-        Genshin AI Companion
-      </h1>
+    <main className="flex min-h-[calc(100vh-64px)] items-center justify-center px-6">
+      <div className="w-full max-w-xl text-center">
+        <h1 className="text-4xl font-bold tracking-tight">
+          GENSHIN APP
+        </h1>
 
-      <p className="mt-4 text-gray-500">
-        原神のアカウント管理・AI育成アシスタント
-      </p>
+        <p className="mt-4 text-sm leading-6 text-gray-500">
+          HoYoLABから原神のキャラクターや装備データを同期して、
+          <br className="hidden sm:block" />
+          GENSHIN APPで管理できます。
+        </p>
 
-      <Link href="/characters" className="mt-8 inline-block underline">
-        キャラクター一覧へ
-      </Link>
+        <div className="mt-8">
+          <SyncButton />
+        </div>
+      </div>
     </main>
   );
 }

@@ -12,6 +12,7 @@
     "@google/genai": "^2.21.0",
     "@types/pg": "^8.20.0",
     "argon2": "^0.45.1",
+    "chrome-types": "^0.1.453",
     "next": "16.2.10",
     "openai": "^7.10.0",
     "pg": "^8.22.0",
@@ -29,6 +30,6 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^6.0.3"
   }
 }
