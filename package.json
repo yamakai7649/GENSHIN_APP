@@ -6,13 +6,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed:weapons": "node --env-file=.env --import tsx scripts/seed-weapons.ts",
+    "seed:characters": "node --env-file=.env --import tsx scripts/seed-characters.ts"
   },
   "dependencies": {
     "@google/genai": "^2.21.0",
     "@types/pg": "^8.20.0",
     "argon2": "^0.45.1",
-    "chrome-types": "^0.1.453",
     "next": "16.2.10",
     "openai": "^7.10.0",
     "pg": "^8.22.0",
@@ -27,9 +28,12 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "chrome-types": "^0.1.453",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
+    "prettier": "^3.9.10",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^6.0.3"
   }
 }

@@ -10,7 +10,8 @@
 
   "host_permissions": [
     "https://act.hoyolab.com/*",
-    "https://sg-act-public-api.hoyolab.com/*"
+    "https://sg-act-public-api.hoyolab.com/*",
+    "https://sg-act-public-api-static.hoyolab.com/*"
   ],
 
   "background": {

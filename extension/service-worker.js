@@ -13,7 +13,6 @@ chrome.runtime.onMessageExternal.addListener(async (message) => {
   }
 });
 
-
 async function syncGenshin() {
   const hoyolabUid = await getHoyolabUid();
 
@@ -36,31 +35,25 @@ async function syncGenshin() {
   const uid = genshinAccount.game_role_id;
   const region = genshinAccount.region;
 
-  // 全所持キャラ
-  const characters = await getCharacters(uid, region);
+  // アカウント詳細
+  const accountOverview = await getAccountOverview(uid, region);
 
-  // 全キャラID
-  const characterIds = characters.map(
-    (character) => character.id
-  );
+  // indexのavatarsから全所持キャラIDを取得
+  const characterIds = accountOverview.avatars.map((character) => character.id);
 
   // 全キャラ詳細
-  const characterDetails = await getCharacterDetails(
-    uid,
-    region,
-    characterIds
-  );
+  const characterDetails = await getCharacterDetails(uid, region, characterIds);
 
   return {
     success: true,
     body: {
       account: genshinAccount,
+      overview: accountOverview,
       characters: characterDetails,
     },
     message: "同期完了",
   };
 }
-
 
 async function getHoyolabUid() {
   const cookie = await chrome.cookies.get({
@@ -71,7 +64,6 @@ async function getHoyolabUid() {
   return cookie?.value;
 }
 
-
 async function getGenshinAccount(hoyolabUid) {
   const res = await fetch(
     `https://sg-act-public-api.hoyolab.com/event/game_record/card/wapi/getGameRecordCard?uid=${hoyolabUid}`,
@@ -81,40 +73,30 @@ async function getGenshinAccount(hoyolabUid) {
         "x-rpc-lang": "ja-jp",
         "x-rpc-language": "ja-jp",
       },
-    }
+    },
   );
 
   const result = await res.json();
 
-  return result.data.list.find(
-    (account) => account.game_id === 2
-  );
+  return result.data.list.find((account) => account.game_id === 2);
 }
 
-
-async function getCharacters(uid, region) {
+async function getAccountOverview(uid, region) {
   const res = await fetch(
-    "https://sg-act-public-api.hoyolab.com/event/game_record/genshin/api/character/list",
+    `https://sg-act-public-api.hoyolab.com/event/game_record/genshin/api/index?avatar_list_type=0&server=${region}&role_id=${uid}`,
     {
-      method: "POST",
       credentials: "include",
       headers: {
-        "Content-Type": "application/json",
         "x-rpc-lang": "ja-jp",
         "x-rpc-language": "ja-jp",
       },
-      body: JSON.stringify({
-        role_id: uid,
-        server: region,
-      }),
-    }
+    },
   );
 
   const result = await res.json();
 
-  return result.data.list;
+  return result.data;
 }
-
 
 async function getCharacterDetails(uid, region, characterIds) {
   const res = await fetch(
@@ -132,10 +114,10 @@ async function getCharacterDetails(uid, region, characterIds) {
         server: region,
         character_ids: characterIds,
       }),
-    }
+    },
   );
 
   const result = await res.json();
 
-  return result.data.list;
+  return result.data;
 }
