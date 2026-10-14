@@ -10,18 +10,8 @@ type WeaponMaster = {
   acquisition_method: string | null;
   passive_name: string | null;
   passive_effect: string | null;
-  ascension_data: AscensionData[];
+  ascension_data: unknown[];
   release_version: string | null;
-};
-
-type AscensionData = {
-  key: string;
-  combatList: {
-    key: string;
-    values: string[];
-  }[];
-  materials: string[];
-  id: string;
 };
 
 type WeaponDetail = {
@@ -48,7 +38,6 @@ type WeaponDetail = {
 type StatusItem = {
   key: string;
   value: string[];
-  id: string;
 };
 
 type StatusData = {
@@ -56,7 +45,7 @@ type StatusData = {
 };
 
 type AscensionResponse = {
-  list: AscensionData[];
+  list: unknown[];
 };
 
 async function getWeaponEntryPageIds(): Promise<string[]> {
@@ -167,6 +156,7 @@ function parseWeaponDetail(weaponDetail: WeaponDetail): WeaponMaster {
     ),
 
     sub_stat_type: getStatusValue("サブステータス"),
+
     acquisition_method: getStatusValue("入手方法"),
 
     passive_name: passive?.key ?? null,
@@ -230,6 +220,7 @@ async function seedWeapons() {
 
   for (const entryPageId of entryPageIds) {
     const weaponDetail = await getWeaponDetail(entryPageId);
+
     const weapon = parseWeaponDetail(weaponDetail);
 
     await upsertWeaponMaster(weapon);
