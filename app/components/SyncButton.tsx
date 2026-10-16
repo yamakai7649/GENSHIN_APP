@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { syncGenshin } from "@/lib/actions/genshin";
+import { prepareGenshinSyncData } from "@/lib/genshin/prepare-sync-data";
 
 export default function SyncButton() {
   const [isSyncing, setIsSyncing] = useState(false);
@@ -12,26 +14,30 @@ export default function SyncButton() {
       const extensionId = process.env.NEXT_PUBLIC_EXTENSION_ID;
 
       if (!extensionId) {
-        console.error("Extension IDが設定されていません");
-        return;
+        throw new Error("Extension IDが設定されていません");
       }
 
-      if (
-        typeof chrome === "undefined" ||
-        !chrome.runtime?.sendMessage
-      ) {
-        console.error("Chrome拡張機能を利用できません");
-        return;
+      if (typeof chrome === "undefined" || !chrome.runtime.sendMessage) {
+        throw new Error("Chrome拡張機能を利用できません");
       }
 
-      const result = await chrome.runtime.sendMessage(
-        extensionId,
-        {
-          type: "SYNC",
-        }
-      );
+      const result = await chrome.runtime.sendMessage(extensionId, {
+        type: "SYNC",
+      });
 
-      console.log(result);
+      if (!result) {
+        throw new Error("拡張機能から応答がありませんでした");
+      }
+
+      if (!result.success) {
+        throw new Error(result.message);
+      }
+
+      const data = prepareGenshinSyncData(result.body);
+
+      const syncResult = await syncGenshin(data);
+
+      console.log(syncResult);
     } catch (error) {
       console.error("同期エラー:", error);
     } finally {
