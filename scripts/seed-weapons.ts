@@ -1,4 +1,5 @@
 import { pool } from "../app/lib/db";
+import { fetchHoyolabJson } from "./hoyolab-fetch";
 
 type WeaponMaster = {
   name: string;
@@ -54,7 +55,7 @@ async function getWeaponEntryPageIds(): Promise<string[]> {
   let pageNum = 1;
 
   while (true) {
-    const res = await fetch(
+    const data = await fetchHoyolabJson(
       "https://sg-act-public-api.hoyolab.com/hoyowiki/genshin/wapi/get_entry_page_list",
       {
         method: "POST",
@@ -73,9 +74,7 @@ async function getWeaponEntryPageIds(): Promise<string[]> {
       },
     );
 
-    const result = await res.json();
-
-    const list: { entry_page_id: string }[] = result.data.list;
+    const list: { entry_page_id: string }[] = data.list;
 
     entryPageIds.push(...list.map((weapon) => weapon.entry_page_id));
 
@@ -90,7 +89,7 @@ async function getWeaponEntryPageIds(): Promise<string[]> {
 }
 
 async function getWeaponDetail(entryPageId: string): Promise<WeaponDetail> {
-  const res = await fetch(
+  const data = await fetchHoyolabJson(
     `https://sg-act-public-api-static.hoyolab.com/hoyowiki/genshin/wapi/entry_page?entry_page_id=${entryPageId}`,
     {
       method: "GET",
@@ -100,9 +99,7 @@ async function getWeaponDetail(entryPageId: string): Promise<WeaponDetail> {
     },
   );
 
-  const result = await res.json();
-
-  return result.data.page;
+  return data.page;
 }
 
 function parseWeaponDetail(weaponDetail: WeaponDetail): WeaponMaster {

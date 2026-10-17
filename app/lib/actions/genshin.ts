@@ -1,15 +1,17 @@
 "use server";
 
-import type { GenshinSyncData } from "@/types/genshin";
+import { genshinSyncDataSchema } from "@/lib/genshin/sync-schema";
 import { getCurrentUser } from "@/lib/auth/user";
 import { saveGenshinData } from "@/lib/genshin/sync";
 
-export async function syncGenshin(data: GenshinSyncData) {
+export async function syncGenshin(rawData: unknown) {
   const user = await getCurrentUser();
 
   if (!user) {
     throw new Error("ログインが必要です");
   }
+
+  const data = genshinSyncDataSchema.parse(rawData);
 
   await saveGenshinData(user.id, data);
 

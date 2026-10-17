@@ -1,4 +1,5 @@
 import { pool } from "../app/lib/db";
+import { fetchHoyolabJson } from "./hoyolab-fetch";
 
 type CharacterMaster = {
   name: string;
@@ -63,7 +64,7 @@ async function getCharacterEntryPageIds(): Promise<string[]> {
   let pageNum = 1;
 
   while (true) {
-    const res = await fetch(
+    const data = await fetchHoyolabJson(
       "https://sg-act-public-api.hoyolab.com/hoyowiki/genshin/wapi/get_entry_page_list",
       {
         method: "POST",
@@ -82,9 +83,7 @@ async function getCharacterEntryPageIds(): Promise<string[]> {
       },
     );
 
-    const result = await res.json();
-
-    const list: { entry_page_id: string }[] = result.data.list;
+    const list: { entry_page_id: string }[] = data.list;
 
     entryPageIds.push(...list.map((character) => character.entry_page_id));
 
@@ -101,7 +100,7 @@ async function getCharacterEntryPageIds(): Promise<string[]> {
 async function getCharacterDetail(
   entryPageId: string,
 ): Promise<CharacterDetail> {
-  const res = await fetch(
+  const data = await fetchHoyolabJson(
     `https://sg-act-public-api-static.hoyolab.com/hoyowiki/genshin/wapi/entry_page?entry_page_id=${entryPageId}`,
     {
       method: "GET",
@@ -111,9 +110,7 @@ async function getCharacterDetail(
     },
   );
 
-  const result = await res.json();
-
-  return result.data.page;
+  return data.page;
 }
 
 function parseCharacterDetail(

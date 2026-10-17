@@ -1,10 +1,7 @@
-import type { GenshinSyncData, GenshinCharacter } from "@/types/genshin";
-
-type RawGenshinSyncData = Omit<GenshinSyncData, "characters"> & {
-  characters: {
-    list: GenshinCharacter[];
-  };
-};
+import type {
+  GenshinSyncData,
+  RawGenshinSyncData,
+} from "@/lib/genshin/sync-schema";
 
 export function prepareGenshinSyncData(
   body: RawGenshinSyncData,

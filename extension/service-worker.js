@@ -8,7 +8,7 @@ chrome.runtime.onMessageExternal.addListener(async (message) => {
 
     return {
       success: false,
-      message: "同期に失敗しました",
+      message: error instanceof Error ? error.message : "同期に失敗しました",
     };
   }
 });
@@ -55,6 +55,22 @@ async function syncGenshin() {
   };
 }
 
+async function fetchHoyolabJson(url, options) {
+  const res = await fetch(url, options);
+
+  if (!res.ok) {
+    throw new Error(`HoYoLAB APIエラー: HTTP ${res.status}`);
+  }
+
+  const result = await res.json();
+
+  if (result.retcode !== 0) {
+    throw new Error(`HoYoLAB APIエラー: ${result.message ?? result.retcode}`);
+  }
+
+  return result.data;
+}
+
 async function getHoyolabUid() {
   const cookie = await chrome.cookies.get({
     url: "https://act.hoyolab.com/",
@@ -65,7 +81,7 @@ async function getHoyolabUid() {
 }
 
 async function getGenshinAccount(hoyolabUid) {
-  const res = await fetch(
+  const data = await fetchHoyolabJson(
     `https://sg-act-public-api.hoyolab.com/event/game_record/card/wapi/getGameRecordCard?uid=${hoyolabUid}`,
     {
       credentials: "include",
@@ -76,13 +92,11 @@ async function getGenshinAccount(hoyolabUid) {
     },
   );
 
-  const result = await res.json();
-
-  return result.data.list.find((account) => account.game_id === 2);
+  return data.list.find((account) => account.game_id === 2);
 }
 
 async function getAccountOverview(uid, region) {
-  const res = await fetch(
+  return await fetchHoyolabJson(
     `https://sg-act-public-api.hoyolab.com/event/game_record/genshin/api/index?avatar_list_type=0&server=${region}&role_id=${uid}`,
     {
       credentials: "include",
@@ -92,14 +106,10 @@ async function getAccountOverview(uid, region) {
       },
     },
   );
-
-  const result = await res.json();
-
-  return result.data;
 }
 
 async function getCharacterDetails(uid, region, characterIds) {
-  const res = await fetch(
+  return await fetchHoyolabJson(
     "https://sg-act-public-api.hoyolab.com/event/game_record/genshin/api/character/detail",
     {
       method: "POST",
@@ -116,8 +126,4 @@ async function getCharacterDetails(uid, region, characterIds) {
       }),
     },
   );
-
-  const result = await res.json();
-
-  return result.data;
 }

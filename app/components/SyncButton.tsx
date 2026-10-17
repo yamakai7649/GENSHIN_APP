@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { syncGenshin } from "@/lib/actions/genshin";
 import { prepareGenshinSyncData } from "@/lib/genshin/prepare-sync-data";
+import { rawGenshinSyncDataSchema } from "@/lib/genshin/sync-schema";
 
 export default function SyncButton() {
   const [isSyncing, setIsSyncing] = useState(false);
@@ -33,7 +34,9 @@ export default function SyncButton() {
         throw new Error(result.message);
       }
 
-      const data = prepareGenshinSyncData(result.body);
+      const parsedBody = rawGenshinSyncDataSchema.parse(result.body);
+
+      const data = prepareGenshinSyncData(parsedBody);
 
       const syncResult = await syncGenshin(data);
 
