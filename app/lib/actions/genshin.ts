@@ -8,7 +8,7 @@ export async function syncGenshin(rawData: unknown) {
   const user = await getCurrentUser();
 
   if (!user) {
-    throw new Error("ログインが必要です");
+    return { success: false, message: "ログインが必要です" };
   }
 
   const data = genshinSyncDataSchema.parse(rawData);

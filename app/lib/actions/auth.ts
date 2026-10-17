@@ -1,15 +1,8 @@
-
 "use server";
 
 import { pool } from "@/lib/db";
-import {
-  hashPassword,
-  verifyPassword,
-} from "@/lib/auth/password";
-import {
-  createSession,
-  deleteSession,
-} from "@/lib/auth/session";
+import { hashPassword, verifyPassword } from "@/lib/auth/password";
+import { createSession, deleteSession } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 
 // 新規登録
@@ -24,7 +17,7 @@ export async function register(formData: FormData) {
     !email.trim() ||
     password.length < 8
   ) {
-    throw new Error("入力内容を確認してください");
+    return { error: "入力内容を確認してください" };
   }
 
   const normalizedEmail = email.trim().toLowerCase();
@@ -41,7 +34,7 @@ export async function register(formData: FormData) {
         VALUES ($1, $2)
         RETURNING id;
       `,
-      [normalizedEmail, passwordHash]
+      [normalizedEmail, passwordHash],
     );
 
     userId = result.rows[0].id;
@@ -53,7 +46,7 @@ export async function register(formData: FormData) {
       "code" in error &&
       error.code === "23505"
     ) {
-      throw new Error("このメールアドレスは登録済みです");
+      return { error: "このメールアドレスは登録済みです" };
     }
 
     throw error;
@@ -80,7 +73,7 @@ export async function login(formData: FormData) {
     !email.trim() ||
     !password
   ) {
-    throw new Error("入力内容を確認してください");
+    return { error: "入力内容を確認してください" };
   }
 
   const result = await pool.query<LoginUser>(
@@ -91,22 +84,19 @@ export async function login(formData: FormData) {
       FROM users
       WHERE email = $1;
     `,
-    [email.trim().toLowerCase()]
+    [email.trim().toLowerCase()],
   );
 
   const user = result.rows[0];
 
   if (!user) {
-    throw new Error("メールアドレスまたはパスワードが違います");
+    return { error: "メールアドレスまたはパスワードが違います" };
   }
 
-  const isValid = await verifyPassword(
-    password,
-    user.passwordHash
-  );
+  const isValid = await verifyPassword(password, user.passwordHash);
 
   if (!isValid) {
-    throw new Error("メールアドレスまたはパスワードが違います");
+    return { error: "メールアドレスまたはパスワードが違います" };
   }
 
   await createSession(user.id);
