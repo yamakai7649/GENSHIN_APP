@@ -19,9 +19,9 @@
       }
     ],
     "paths": {
-        "@/*": ["./app/*"]
+      "@/*": ["./app/*"]
     },
-    "types": ["chrome-types"],
+    "types": ["chrome-types", "node"]
   },
   "include": [
     "next-env.d.ts",
