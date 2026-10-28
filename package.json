@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "seed:weapons": "node --env-file=.env --import tsx scripts/seed-weapons.ts",
-    "seed:characters": "node --env-file=.env --import tsx scripts/seed-characters.ts"
+    "seed:characters": "node --env-file=.env --import tsx scripts/seed-characters.ts",
+    "seed:artifact-sets": "node --env-file=.env --import tsx scripts/seed-artifact-sets.ts"
   },
   "dependencies": {
     "@google/genai": "^2.21.0",

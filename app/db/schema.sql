@@ -93,6 +93,17 @@ CREATE TABLE weapon_masters (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
+CREATE TABLE artifact_set_masters (
+  id serial PRIMARY KEY,
+  name text NOT NULL UNIQUE,
+  icon text,
+  single_set_effect text,
+  two_set_effect text,
+  four_set_effect text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
 CREATE TABLE account_characters (
   id serial PRIMARY KEY,
 
