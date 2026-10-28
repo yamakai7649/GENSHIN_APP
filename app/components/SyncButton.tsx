@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { syncGenshin } from "@/lib/actions/genshin";
-import { prepareGenshinSyncData } from "@/lib/genshin/prepare-sync-data";
 import { rawGenshinSyncDataSchema } from "@/lib/genshin/sync-schema";
 import { UserFacingError } from "@/lib/errors";
 
@@ -40,10 +39,11 @@ export default function SyncButton() {
         throw new UserFacingError(result.message);
       }
 
-      const parsedBody = rawGenshinSyncDataSchema.parse(result.body);
+      console.log("Chrome拡張から受信した生データ:", result.body);
 
-      const data = prepareGenshinSyncData(parsedBody);
+      const data = rawGenshinSyncDataSchema.parse(result.body);
 
+      console.log("Zod検証・変換後の同期データ:", data);
       console.log("HoYoLABから取得したアカウント:", data.account);
       console.log("同期するキャラ数:", data.characters.length);
       console.log("同期するキャラ一覧:", data.characters);
