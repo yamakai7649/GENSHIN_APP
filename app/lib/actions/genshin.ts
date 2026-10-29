@@ -1,6 +1,6 @@
 "use server";
 
-import { genshinSyncDataSchema } from "@/lib/genshin/sync-schema";
+import { genshinSyncDataSchema } from "@/lib/genshin/schemas/sync";
 import { getCurrentUser } from "@/lib/auth/user";
 import { saveGenshinData } from "@/lib/genshin/sync";
 

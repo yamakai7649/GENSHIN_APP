@@ -1,5 +1,5 @@
 import type { PoolClient } from "pg";
-import type { GenshinCharacter } from "@/lib/genshin/sync-schema";
+import type { GenshinCharacter } from "@/lib/genshin/schemas/character";
 
 export function getCharacterMasterName(character: GenshinCharacter): string {
   if (character.base.name !== "旅人") {

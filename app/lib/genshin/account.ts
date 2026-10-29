@@ -1,5 +1,5 @@
 import type { PoolClient } from "pg";
-import type { GenshinSyncData } from "@/lib/genshin/sync-schema";
+import type { GenshinSyncData } from "@/lib/genshin/schemas/sync";
 
 export async function saveGenshinAccount(
   client: PoolClient,

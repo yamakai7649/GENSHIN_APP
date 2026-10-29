@@ -1,5 +1,5 @@
 import { pool } from "@/lib/db";
-import type { GenshinSyncData } from "@/lib/genshin/sync-schema";
+import type { GenshinSyncData } from "@/lib/genshin/schemas/sync";
 import { saveGenshinAccount } from "@/lib/genshin/account";
 import { saveCharacters } from "@/lib/genshin/characters";
 import { saveWeapons } from "@/lib/genshin/weapons";

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { syncGenshin } from "@/lib/actions/genshin";
-import { rawGenshinSyncDataSchema } from "@/lib/genshin/sync-schema";
+import { rawGenshinSyncDataSchema } from "@/lib/genshin/schemas/sync";
 import { UserFacingError } from "@/lib/errors";
 
 export default function SyncButton() {

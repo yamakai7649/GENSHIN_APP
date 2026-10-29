@@ -1,5 +1,5 @@
 import type { PoolClient } from "pg";
-import type { GenshinCharacter } from "@/lib/genshin/sync-schema";
+import type { GenshinCharacter } from "@/lib/genshin/schemas/character";
 import { getCharacterMasterName } from "@/lib/genshin/characters";
 
 export async function saveWeapons(
