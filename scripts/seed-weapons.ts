@@ -1,53 +1,91 @@
+import { z } from "zod";
 import { pool } from "../app/lib/db";
 import { fetchHoyolabJson } from "./hoyolab-fetch";
+
+// ========================================
+// 1. Schema：HoYoWikiのRawデータ
+// ========================================
+
+// 武器一覧API
+const weaponListSchema = z.object({
+  list: z.array(
+    z.object({
+      entry_page_id: z.string(),
+    }),
+  ),
+});
+
+// 武器詳細API
+const weaponDetailSchema = z.object({
+  name: z.string().min(1),
+  desc: z.string(),
+  icon_url: z.string(),
+
+  modules: z.array(
+    z.object({
+      name: z.string(),
+      components: z.array(
+        z.object({
+          data: z.string(),
+        }),
+      ),
+    }),
+  ),
+
+  filter_values: z.object({
+    weapon_rarity: z.object({
+      value_types: z
+        .array(
+          z.object({
+            enum_string: z.string(),
+          }),
+        )
+        .min(1),
+    }),
+  }),
+});
+
+// ステータスModule内のJSON
+const statusDataSchema = z.object({
+  list: z.array(
+    z.object({
+      key: z.string(),
+      value: z.array(z.string()),
+    }),
+  ),
+});
+
+// 突破Module内のJSON
+const ascensionDataSchema = z.object({
+  list: z.array(z.unknown()),
+});
+
+type WeaponDetail = z.infer<typeof weaponDetailSchema>;
+
+// ========================================
+// 2. Type：DBに保存するデータ
+// ========================================
 
 type WeaponMaster = {
   name: string;
   description: string | null;
   icon: string | null;
+
   weapon_type: string;
   rarity: number;
   sub_stat_type: string | null;
+
   acquisition_method: string | null;
   passive_name: string | null;
   passive_effect: string | null;
+
   ascension_data: unknown[];
   release_version: string | null;
 };
 
-type WeaponDetail = {
-  name: string;
-  desc: string;
-  icon_url: string;
-
-  modules: {
-    name: string;
-    components: {
-      data: string;
-    }[];
-  }[];
-
-  filter_values: {
-    weapon_rarity: {
-      value_types: {
-        enum_string: string;
-      }[];
-    };
-  };
-};
-
-type StatusItem = {
-  key: string;
-  value: string[];
-};
-
-type StatusData = {
-  list: StatusItem[];
-};
-
-type AscensionResponse = {
-  list: unknown[];
-};
+// ========================================
+// 3. Fetch：HoYoWikiからデータ取得
+// ========================================
 
 async function getWeaponEntryPageIds(): Promise<string[]> {
   const entryPageIds: string[] = [];
@@ -74,7 +112,7 @@ async function getWeaponEntryPageIds(): Promise<string[]> {
       },
     );
 
-    const list: { entry_page_id: string }[] = data.list;
+    const { list } = weaponListSchema.parse(data);
 
     entryPageIds.push(...list.map((weapon) => weapon.entry_page_id));
 
@@ -88,7 +126,7 @@ async function getWeaponEntryPageIds(): Promise<string[]> {
   return entryPageIds;
 }
 
-async function getWeaponDetail(entryPageId: string): Promise<WeaponDetail> {
+async function getWeaponDetail(entryPageId: string): Promise<unknown> {
   const data = await fetchHoyolabJson(
     `https://sg-act-public-api-static.hoyolab.com/hoyowiki/genshin/wapi/entry_page?entry_page_id=${entryPageId}`,
     {
@@ -101,6 +139,10 @@ async function getWeaponDetail(entryPageId: string): Promise<WeaponDetail> {
 
   return data.page;
 }
+
+// ========================================
+// 4. Transform：必要な情報を選択・変換
+// ========================================
 
 function parseWeaponDetail(weaponDetail: WeaponDetail): WeaponMaster {
   const statusModule = weaponDetail.modules.find(
@@ -115,10 +157,19 @@ function parseWeaponDetail(weaponDetail: WeaponDetail): WeaponMaster {
     throw new Error(`${weaponDetail.name}: 必要なmoduleが見つかりません`);
   }
 
-  const statusData: StatusData = JSON.parse(statusModule.components[0].data);
+  // Moduleの中身を取得
+  const statusComponent = statusModule.components[0];
+  const ascensionComponent = ascensionModule.components[0];
 
-  const ascensionData: AscensionResponse = JSON.parse(
-    ascensionModule.components[0].data,
+  if (!statusComponent || !ascensionComponent) {
+    throw new Error(`${weaponDetail.name}: 必要なcomponentが見つかりません`);
+  }
+
+  // JSON文字列をパースして検証
+  const statusData = statusDataSchema.parse(JSON.parse(statusComponent.data));
+
+  const ascensionData = ascensionDataSchema.parse(
+    JSON.parse(ascensionComponent.data),
   );
 
   const getStatusValue = (key: string): string | null => {
@@ -141,6 +192,14 @@ function parseWeaponDetail(weaponDetail: WeaponDetail): WeaponMaster {
     throw new Error(`${weaponDetail.name}: 武器種を取得できません`);
   }
 
+  const rarity = Number(
+    weaponDetail.filter_values.weapon_rarity.value_types[0].enum_string,
+  );
+
+  if (!Number.isInteger(rarity) || rarity < 1 || rarity > 5) {
+    throw new Error(`${weaponDetail.name}: レアリティが不正です`);
+  }
+
   return {
     name: weaponDetail.name,
     description: weaponDetail.desc || null,
@@ -148,9 +207,7 @@ function parseWeaponDetail(weaponDetail: WeaponDetail): WeaponMaster {
 
     weapon_type: weaponType,
 
-    rarity: Number(
-      weaponDetail.filter_values.weapon_rarity.value_types[0].enum_string,
-    ),
+    rarity,
 
     sub_stat_type: getStatusValue("サブステータス"),
 
@@ -164,6 +221,10 @@ function parseWeaponDetail(weaponDetail: WeaponDetail): WeaponMaster {
     release_version: getStatusValue("実装バージョン"),
   };
 }
+
+// ========================================
+// 5. Database：武器マスター保存
+// ========================================
 
 async function upsertWeaponMaster(weapon: WeaponMaster) {
   await pool.query(
@@ -212,15 +273,23 @@ async function upsertWeaponMaster(weapon: WeaponMaster) {
   );
 }
 
+// ========================================
+// 6. Main：Seed処理
+// ========================================
+
 async function seedWeapons() {
   const entryPageIds = await getWeaponEntryPageIds();
 
   for (const entryPageId of entryPageIds) {
-    const weaponDetail = await getWeaponDetail(entryPageId);
+    const rawWeapon = await getWeaponDetail(entryPageId);
+
+    const weaponDetail = weaponDetailSchema.parse(rawWeapon);
 
     const weapon = parseWeaponDetail(weaponDetail);
 
     await upsertWeaponMaster(weapon);
+
+    console.log(`登録完了: ${weapon.name}`);
   }
 }
 

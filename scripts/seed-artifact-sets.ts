@@ -1,5 +1,31 @@
+import { z } from "zod";
 import { pool } from "../app/lib/db";
 import { fetchHoyolabJson } from "./hoyolab-fetch";
+
+// ========================================
+// 1. Schema：HoYoWikiのRawデータ
+// ========================================
+
+const artifactSetListItemSchema = z.object({
+  name: z.string(),
+  icon_url: z.string(),
+
+  display_field: z.object({
+    single_set_effect: z.string(),
+    two_set_effect: z.string(),
+    four_set_effect: z.string(),
+  }),
+});
+
+const artifactSetListSchema = z.object({
+  list: z.array(artifactSetListItemSchema),
+});
+
+type ArtifactSetListItem = z.infer<typeof artifactSetListItemSchema>;
+
+// ========================================
+// 2. Type：DBに保存するデータ
+// ========================================
 
 type ArtifactSetMaster = {
   name: string;
@@ -9,15 +35,9 @@ type ArtifactSetMaster = {
   four_set_effect: string | null;
 };
 
-type ArtifactSetListItem = {
-  name: string;
-  icon_url: string;
-  display_field: {
-    single_set_effect: string;
-    two_set_effect: string;
-    four_set_effect: string;
-  };
-};
+// ========================================
+// 3. Fetch：HoYoWikiからデータ取得
+// ========================================
 
 async function getArtifactSetList(): Promise<ArtifactSetListItem[]> {
   const artifactSets: ArtifactSetListItem[] = [];
@@ -44,7 +64,7 @@ async function getArtifactSetList(): Promise<ArtifactSetListItem[]> {
       },
     );
 
-    const list: ArtifactSetListItem[] = data.list;
+    const { list } = artifactSetListSchema.parse(data);
 
     artifactSets.push(...list);
 
@@ -58,6 +78,10 @@ async function getArtifactSetList(): Promise<ArtifactSetListItem[]> {
   return artifactSets;
 }
 
+// ========================================
+// 4. Transform：必要な情報を選択・変換
+// ========================================
+
 function parseArtifactSet(item: ArtifactSetListItem): ArtifactSetMaster {
   return {
     name: item.name,
@@ -67,6 +91,10 @@ function parseArtifactSet(item: ArtifactSetListItem): ArtifactSetMaster {
     four_set_effect: item.display_field.four_set_effect || null,
   };
 }
+
+// ========================================
+// 5. Database：聖遺物セットマスター保存
+// ========================================
 
 async function upsertArtifactSetMaster(artifactSet: ArtifactSetMaster) {
   await pool.query(
@@ -96,6 +124,10 @@ async function upsertArtifactSetMaster(artifactSet: ArtifactSetMaster) {
     ],
   );
 }
+
+// ========================================
+// 6. Main：Seed処理
+// ========================================
 
 async function seedArtifactSets() {
   const artifactSetList = await getArtifactSetList();

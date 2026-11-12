@@ -1,5 +1,78 @@
+import { z } from "zod";
 import { pool } from "../app/lib/db";
 import { fetchHoyolabJson } from "./hoyolab-fetch";
+
+// ========================================
+// 1. Schema：HoYoWikiのRawデータ
+// ========================================
+
+// キャラクター一覧API
+const characterListSchema = z.object({
+  list: z.array(
+    z.object({
+      entry_page_id: z.string(),
+    }),
+  ),
+});
+
+// キャラクター詳細API
+const characterDetailSchema = z.object({
+  name: z.string(),
+  desc: z.string(),
+  icon_url: z.string(),
+  header_img_url: z.string(),
+
+  modules: z.array(
+    z.object({
+      name: z.string(),
+      components: z.array(
+        z.object({
+          component_id: z.string(),
+          data: z.string(),
+        }),
+      ),
+    }),
+  ),
+
+  filter_values: z.object({
+    character_vision: z.object({
+      values: z.array(z.string()),
+    }),
+    character_weapon: z.object({
+      values: z.array(z.string()).min(1),
+    }),
+    character_property: z.object({
+      values: z.array(z.string()),
+    }),
+    character_rarity: z.object({
+      values: z.array(z.string()).min(1),
+    }),
+    character_region: z.object({
+      values: z.array(z.string()),
+    }),
+  }),
+});
+
+// 天賦Module内のJSON
+const talentDataSchema = z.object({
+  list: z.array(z.unknown()),
+});
+
+// 命ノ星座Module内のJSON
+const constellationDataSchema = z.object({
+  list: z.array(z.unknown()),
+});
+
+// スキップ判定用に名前だけ検証
+const characterNameSchema = characterDetailSchema.pick({
+  name: true,
+});
+
+type CharacterDetail = z.infer<typeof characterDetailSchema>;
+
+// ========================================
+// 2. Type：DBに保存するデータ
+// ========================================
 
 type CharacterMaster = {
   name: string;
@@ -15,49 +88,13 @@ type CharacterMaster = {
   constellation_data: unknown[];
 };
 
-type CharacterDetail = {
-  name: string;
-  desc: string;
-  icon_url: string;
-  header_img_url: string;
+const skipCharacters = ["アナスターシャ", "ダニカ"];
 
-  modules: {
-    name: string;
-    components: {
-      component_id: string;
-      data: string;
-    }[];
-  }[];
+// ========================================
+// 3. Fetch：HoYoWikiからデータ取得
+// ========================================
 
-  filter_values: {
-    character_vision: {
-      values: string[];
-    };
-    character_weapon: {
-      values: string[];
-    };
-    character_property: {
-      values: string[];
-    };
-    character_rarity: {
-      values: string[];
-    };
-    character_region: {
-      values: string[];
-    };
-  };
-};
-
-type TalentResponse = {
-  list: unknown[];
-};
-
-type ConstellationResponse = {
-  list: unknown[];
-};
-
-const skipCharacters = ["バレリー", "ミティヤ"];
-
+// キャラクター一覧からentry_page_idを取得
 async function getCharacterEntryPageIds(): Promise<string[]> {
   const entryPageIds: string[] = [];
   const pageSize = 30;
@@ -83,7 +120,7 @@ async function getCharacterEntryPageIds(): Promise<string[]> {
       },
     );
 
-    const list: { entry_page_id: string }[] = data.list;
+    const { list } = characterListSchema.parse(data);
 
     entryPageIds.push(...list.map((character) => character.entry_page_id));
 
@@ -97,9 +134,8 @@ async function getCharacterEntryPageIds(): Promise<string[]> {
   return entryPageIds;
 }
 
-async function getCharacterDetail(
-  entryPageId: string,
-): Promise<CharacterDetail> {
+// キャラクター1件のRawデータを取得
+async function getCharacterDetail(entryPageId: string): Promise<unknown> {
   const data = await fetchHoyolabJson(
     `https://sg-act-public-api-static.hoyolab.com/hoyowiki/genshin/wapi/entry_page?entry_page_id=${entryPageId}`,
     {
@@ -113,31 +149,49 @@ async function getCharacterDetail(
   return data.page;
 }
 
+// ========================================
+// 4. Transform：必要な情報を選択・変換
+// ========================================
+
 function parseCharacterDetail(
   characterDetail: CharacterDetail,
 ): CharacterMaster {
+  // 必要なModuleを取得
   const talentModule = characterDetail.modules.find(
     (module) => module.name === "天賦",
-  )!;
+  );
 
   const constellationModule = characterDetail.modules.find(
     (module) => module.name === "命ノ星座",
-  )!;
+  );
 
+  if (!talentModule || !constellationModule) {
+    throw new Error(`${characterDetail.name}: 必要なmoduleが見つかりません`);
+  }
+
+  // 必要なComponentを取得
   const talentComponent = talentModule.components.find(
     (component) => component.component_id === "talent",
-  )!;
+  );
 
   const constellationComponent = constellationModule.components.find(
     (component) => component.component_id === "summaryList",
-  )!;
+  );
 
-  const talentData: TalentResponse = JSON.parse(talentComponent.data);
+  if (!talentComponent || !constellationComponent) {
+    throw new Error(`${characterDetail.name}: 必要なcomponentが見つかりません`);
+  }
 
-  const constellationData: ConstellationResponse = constellationComponent.data
-    ? JSON.parse(constellationComponent.data)
-    : { list: [] };
+  // JSON文字列をパースして検証
+  const talentData = talentDataSchema.parse(JSON.parse(talentComponent.data));
 
+  const constellationData = constellationDataSchema.parse(
+    constellationComponent.data
+      ? JSON.parse(constellationComponent.data)
+      : { list: [] },
+  );
+
+  // DB保存用データに変換
   return {
     name: characterDetail.name,
 
@@ -165,6 +219,10 @@ function parseCharacterDetail(
     constellation_data: constellationData.list,
   };
 }
+
+// ========================================
+// 5. Database：キャラクターマスター保存
+// ========================================
 
 async function upsertCharacterMaster(character: CharacterMaster) {
   await pool.query(
@@ -213,20 +271,32 @@ async function upsertCharacterMaster(character: CharacterMaster) {
   );
 }
 
+// ========================================
+// 6. Main：Seed処理
+// ========================================
+
 async function seedCharacters() {
   const entryPageIds = await getCharacterEntryPageIds();
 
   for (const entryPageId of entryPageIds) {
-    const characterDetail = await getCharacterDetail(entryPageId);
+    // ① Rawデータ取得
+    const rawCharacter = await getCharacterDetail(entryPageId);
 
-    if (skipCharacters.includes(characterDetail.name)) {
-      console.log(`スキップ: ${characterDetail.name}`);
+    // ② スキップ判定用に名前だけ検証
+    const { name } = characterNameSchema.parse(rawCharacter);
 
+    if (skipCharacters.includes(name)) {
+      console.log(`スキップ: ${name}`);
       continue;
     }
 
+    // ③ 詳細データをZodで検証
+    const characterDetail = characterDetailSchema.parse(rawCharacter);
+
+    // ④ DB保存用に変換
     const character = parseCharacterDetail(characterDetail);
 
+    // ⑤ 保存
     await upsertCharacterMaster(character);
 
     console.log(`登録完了: ${character.name}`);
