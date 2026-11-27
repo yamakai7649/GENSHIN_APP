@@ -53,14 +53,33 @@ const characterDetailSchema = z.object({
   }),
 });
 
-// 天賦Module内のJSON
-const talentDataSchema = z.object({
-  list: z.array(z.unknown()),
+// 天賦のレベル別倍率
+const talentAttributeSchema = z.object({
+  key: z.string(),
+  values: z.array(z.string()),
 });
 
-// 命ノ星座Module内のJSON
+// HoYoWikiの天賦
+const talentSchema = z.object({
+  title: z.string(),
+  icon_url: z.string(),
+  desc: z.string(),
+  attributes: z.array(talentAttributeSchema).nullable(),
+});
+
+const talentDataSchema = z.object({
+  list: z.array(talentSchema),
+});
+
+// HoYoWikiの命ノ星座
+const constellationSchema = z.object({
+  name: z.string(),
+  icon_url: z.string(),
+  desc: z.string(),
+});
+
 const constellationDataSchema = z.object({
-  list: z.array(z.unknown()),
+  list: z.array(constellationSchema),
 });
 
 // スキップ判定用に名前だけ検証
@@ -69,6 +88,12 @@ const characterNameSchema = characterDetailSchema.pick({
 });
 
 type CharacterDetail = z.infer<typeof characterDetailSchema>;
+
+type TalentMaster = z.infer<typeof talentSchema>;
+
+type ConstellationMaster = z.infer<typeof constellationSchema> & {
+  pos: number;
+};
 
 // ========================================
 // 2. Type：DBに保存するデータ
@@ -84,8 +109,8 @@ type CharacterMaster = {
   ascension_stat: string | null;
   icon: string | null;
   image: string | null;
-  talent_data: unknown[];
-  constellation_data: unknown[];
+  talent_data: TalentMaster[];
+  constellation_data: ConstellationMaster[];
 };
 
 const skipCharacters = ["アナスターシャ", "ダニカ"];
@@ -216,7 +241,10 @@ function parseCharacterDetail(
 
     talent_data: talentData.list,
 
-    constellation_data: constellationData.list,
+    constellation_data: constellationData.list.map((constellation, index) => ({
+      ...constellation,
+      pos: index + 1,
+    })),
   };
 }
 
@@ -240,7 +268,10 @@ async function upsertCharacterMaster(character: CharacterMaster) {
         talent_data,
         constellation_data
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      VALUES (
+        $1, $2, $3, $4, $5, $6,
+        $7, $8, $9, $10, $11
+      )
       ON CONFLICT (name)
       DO UPDATE SET
         description = EXCLUDED.description,
@@ -282,7 +313,7 @@ async function seedCharacters() {
     // ① Rawデータ取得
     const rawCharacter = await getCharacterDetail(entryPageId);
 
-    // ② スキップ判定用に名前だけ検証
+    // ② 名前だけ検証してスキップ判定
     const { name } = characterNameSchema.parse(rawCharacter);
 
     if (skipCharacters.includes(name)) {
@@ -290,10 +321,10 @@ async function seedCharacters() {
       continue;
     }
 
-    // ③ 詳細データをZodで検証
+    // ③ 詳細データを検証
     const characterDetail = characterDetailSchema.parse(rawCharacter);
 
-    // ④ DB保存用に変換
+    // ④ DB保存用データに変換
     const character = parseCharacterDetail(characterDetail);
 
     // ⑤ 保存

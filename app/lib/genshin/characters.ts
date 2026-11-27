@@ -58,12 +58,33 @@ export async function saveCharacters(
   const values: (string | number | null)[] = [];
 
   const placeholders = rows.map(({ character, characterMasterId }, index) => {
-    const offset = index * 11;
+    const offset = index * 12;
 
+    // 天賦情報
     const skillLevels = character.skills.map((skill) => ({
-      skill_id: skill.skill_id,
+      name: skill.name,
+      skill_type: skill.skill_type,
       level: skill.level,
+      is_unlock: skill.is_unlock,
+      is_enhanced: skill.is_enhanced,
+      can_enhanced: skill.can_enhanced,
+      enhanced_desc: skill.enhanced_desc,
+      skill_affix_list: skill.skill_affix_list,
+      before_enhanced_skill_attr_index: skill.before_enhanced_skill_attr_index,
+      after_enhanced_skill_attr_index: skill.after_enhanced_skill_attr_index,
     }));
+
+    // 命ノ星座情報
+    const constellationDetails = character.constellations.map(
+      (constellation) => ({
+        pos: constellation.pos,
+        name: constellation.name,
+        effect: constellation.effect,
+        enhanced_effect: constellation.enhanced_effect,
+        can_enhanced: constellation.can_enhanced,
+        is_enhanced: constellation.is_enhanced,
+      }),
+    );
 
     values.push(
       accountId,
@@ -77,7 +98,9 @@ export async function saveCharacters(
       JSON.stringify(character.base_properties),
       JSON.stringify(character.extra_properties),
       JSON.stringify(character.element_properties),
+
       JSON.stringify(skillLevels),
+      JSON.stringify(constellationDetails),
       JSON.stringify(character.relics),
     );
 
@@ -93,7 +116,8 @@ export async function saveCharacters(
           $${offset + 8},
           $${offset + 9},
           $${offset + 10},
-          $${offset + 11}
+          $${offset + 11},
+          $${offset + 12}
         )
       `;
   });
@@ -114,6 +138,7 @@ export async function saveCharacters(
         extra_stats,
         elemental_stats,
         skill_levels,
+        constellation_details,
         artifacts
       )
       VALUES
@@ -147,6 +172,9 @@ export async function saveCharacters(
 
         skill_levels =
           EXCLUDED.skill_levels,
+
+        constellation_details =
+          EXCLUDED.constellation_details,
 
         artifacts =
           EXCLUDED.artifacts,

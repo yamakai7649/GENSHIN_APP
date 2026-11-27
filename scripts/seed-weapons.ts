@@ -18,8 +18,8 @@ const weaponListSchema = z.object({
 // 武器詳細API
 const weaponDetailSchema = z.object({
   name: z.string().min(1),
-  desc: z.string(),
-  icon_url: z.string(),
+  desc: z.string().min(1),
+  icon_url: z.string().min(1),
 
   modules: z.array(
     z.object({
@@ -55,11 +55,6 @@ const statusDataSchema = z.object({
   ),
 });
 
-// 突破Module内のJSON
-const ascensionDataSchema = z.object({
-  list: z.array(z.unknown()),
-});
-
 type WeaponDetail = z.infer<typeof weaponDetailSchema>;
 
 // ========================================
@@ -68,8 +63,8 @@ type WeaponDetail = z.infer<typeof weaponDetailSchema>;
 
 type WeaponMaster = {
   name: string;
-  description: string | null;
-  icon: string | null;
+  description: string;
+  icon: string;
 
   weapon_type: string;
   rarity: number;
@@ -79,7 +74,6 @@ type WeaponMaster = {
   passive_name: string | null;
   passive_effect: string | null;
 
-  ascension_data: unknown[];
   release_version: string | null;
 };
 
@@ -149,28 +143,19 @@ function parseWeaponDetail(weaponDetail: WeaponDetail): WeaponMaster {
     (module) => module.name === "ステータス",
   );
 
-  const ascensionModule = weaponDetail.modules.find(
-    (module) => module.name === "突破",
-  );
-
-  if (!statusModule || !ascensionModule) {
+  if (!statusModule) {
     throw new Error(`${weaponDetail.name}: 必要なmoduleが見つかりません`);
   }
 
   // Moduleの中身を取得
   const statusComponent = statusModule.components[0];
-  const ascensionComponent = ascensionModule.components[0];
 
-  if (!statusComponent || !ascensionComponent) {
+  if (!statusComponent) {
     throw new Error(`${weaponDetail.name}: 必要なcomponentが見つかりません`);
   }
 
   // JSON文字列をパースして検証
   const statusData = statusDataSchema.parse(JSON.parse(statusComponent.data));
-
-  const ascensionData = ascensionDataSchema.parse(
-    JSON.parse(ascensionComponent.data),
-  );
 
   const getStatusValue = (key: string): string | null => {
     return statusData.list.find((item) => item.key === key)?.value[0] ?? null;
@@ -202,8 +187,8 @@ function parseWeaponDetail(weaponDetail: WeaponDetail): WeaponMaster {
 
   return {
     name: weaponDetail.name,
-    description: weaponDetail.desc || null,
-    icon: weaponDetail.icon_url || null,
+    description: weaponDetail.desc,
+    icon: weaponDetail.icon_url,
 
     weapon_type: weaponType,
 
@@ -215,8 +200,6 @@ function parseWeaponDetail(weaponDetail: WeaponDetail): WeaponMaster {
 
     passive_name: passive?.key ?? null,
     passive_effect: passive?.value[0] ?? null,
-
-    ascension_data: ascensionData.list,
 
     release_version: getStatusValue("実装バージョン"),
   };
@@ -239,10 +222,9 @@ async function upsertWeaponMaster(weapon: WeaponMaster) {
         acquisition_method,
         passive_name,
         passive_effect,
-        ascension_data,
         release_version
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       ON CONFLICT (name)
       DO UPDATE SET
         description = EXCLUDED.description,
@@ -253,7 +235,6 @@ async function upsertWeaponMaster(weapon: WeaponMaster) {
         acquisition_method = EXCLUDED.acquisition_method,
         passive_name = EXCLUDED.passive_name,
         passive_effect = EXCLUDED.passive_effect,
-        ascension_data = EXCLUDED.ascension_data,
         release_version = EXCLUDED.release_version,
         updated_at = NOW()
     `,
@@ -267,7 +248,6 @@ async function upsertWeaponMaster(weapon: WeaponMaster) {
       weapon.acquisition_method,
       weapon.passive_name,
       weapon.passive_effect,
-      JSON.stringify(weapon.ascension_data),
       weapon.release_version,
     ],
   );

@@ -75,8 +75,8 @@ CREATE TABLE character_masters (
 CREATE TABLE weapon_masters (
   id serial PRIMARY KEY,
   name text NOT NULL UNIQUE,
-  description text,
-  icon text,
+  description text NOT NULL,
+  icon text NOT NULL,
 
   weapon_type text NOT NULL,
   rarity smallint NOT NULL,
@@ -86,7 +86,6 @@ CREATE TABLE weapon_masters (
   passive_name text,
   passive_effect text,
 
-  ascension_data jsonb NOT NULL DEFAULT '[]',
   release_version text,
 
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -96,10 +95,15 @@ CREATE TABLE weapon_masters (
 CREATE TABLE artifact_set_masters (
   id serial PRIMARY KEY,
   name text NOT NULL UNIQUE,
-  icon text,
+  icon text NOT NULL,
   single_set_effect text,
   two_set_effect text,
   four_set_effect text,
+  flower_icon text,
+  plume_icon text,
+  sands_icon text,
+  goblet_icon text,
+  circlet_icon text,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );

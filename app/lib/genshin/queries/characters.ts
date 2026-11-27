@@ -9,6 +9,7 @@ export type CharacterListItem = {
   promoteLevel: number;
   friendshipLevel: number;
   constellationLevel: number;
+
   weapon: {
     name: string;
     level: number;
@@ -28,14 +29,18 @@ export type CharacterDetail = {
     friendshipLevel: number;
     constellationLevel: number;
   };
+
   stats: {
     displayed: unknown;
     base: unknown;
     extra: unknown;
     elemental: unknown;
   };
+
   skills: unknown;
+  constellations: unknown;
   artifacts: unknown;
+
   weapon: {
     name: string;
     weaponType: string;
@@ -63,6 +68,7 @@ export async function listCharacters(
         ac.promote_level AS "promoteLevel",
         ac.friendship_level AS "friendshipLevel",
         ac.constellation_level AS "constellationLevel",
+
         jsonb_build_object(
           'name', wm.name,
           'level', aw.level,
@@ -111,14 +117,20 @@ export async function getCharacter(
           'friendshipLevel', ac.friendship_level,
           'constellationLevel', ac.constellation_level
         ) AS character,
+
         jsonb_build_object(
           'displayed', ac.displayed_stats,
           'base', ac.base_stats,
           'extra', ac.extra_stats,
           'elemental', ac.elemental_stats
         ) AS stats,
+
         ac.skill_levels AS skills,
+
+        ac.constellation_details AS constellations,
+
         ac.artifacts,
+
         jsonb_build_object(
           'name', wm.name,
           'weaponType', wm.weapon_type,
